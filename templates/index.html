@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Voice AI Assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Inter, sans-serif;
+    color: white;
+}
+.card {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    padding: 30px;
+    width: 360px;
+    border-radius: 20px;
+    text-align: center;
+}
+button {
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: none;
+    margin: 10px;
+    cursor: pointer;
+    font-size: 15px;
+}
+.start { background: white; color: #764ba2; }
+.stop { background: #ff4d4d; color: white; }
+#status { margin-top: 10px; }
+.answer {
+    margin-top: 15px;
+    background: rgba(0,0,0,0.2);
+    padding: 12px;
+    border-radius: 12px;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+    <h2>🎤 Voice AI</h2>
+    <p>Speak and get instant reply</p>
+
+    <button class="start" onclick="startListening()">Start</button>
+    <button class="stop" onclick="stopAll()">Stop</button>
+
+    <div id="status"></div>
+    <div id="answer" class="answer"></div>
+</div>
+
+<script>
+let recognition;
+let listening = false;
+
+function startListening() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported");
+        return;
+    }
+
+    if (listening) return;
+
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.start();
+    listening = true;
+
+    document.getElementById("status").innerText = "🎧 Listening...";
+
+    recognition.onresult = async (event) => {
+        const text = event.results[0][0].transcript;
+        document.getElementById("status").innerText = "You: " + text;
+        listening = false;
+
+        const res = await fetch("/ask", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({question: text})
+        });
+
+        const data = await res.json();
+        document.getElementById("answer").innerText = "🤖 " + data.answer;
+        speak(data.answer);
+    };
+
+    recognition.onend = () => listening = false;
+}
+
+function stopAll() {
+    if (recognition && listening) {
+        recognition.stop();
+        listening = false;
+    }
+    window.speechSynthesis.cancel();
+    document.getElementById("status").innerText = "⏹ Stopped";
+}
+
+function speak(text) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-US";
+    speechSynthesis.speak(utter);
+}
+</script>
+</body>
+</html>
